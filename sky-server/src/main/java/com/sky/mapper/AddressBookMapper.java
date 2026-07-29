@@ -53,9 +53,4 @@ public interface AddressBookMapper {
     @Delete("delete from address_book where id = #{id}")
     void deleteById(Long id);
 
-    /**
-     * 根据id查询地址并拼装为address
-     * @param id
-     */
-    String getAddressById(Long id);
 }

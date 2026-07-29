@@ -42,10 +42,5 @@
         where id = #{id}
     </update>
 
-    <select id="getAddressById" resultType="java.lang.String">
-        select concat(province_name, ' ', city_name, ' ', district_name)
-        from address_book
-        where id = #{id}
-    </select>
 
 </mapper>
