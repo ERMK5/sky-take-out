@@ -2,8 +2,10 @@ package com.sky.service.impl;
 
 import com.sky.entity.Orders;
 import com.sky.mapper.OrderMapper;
+import com.sky.mapper.UserMapper;
 import com.sky.service.ReportService;
 import com.sky.vo.TurnoverReportVO;
+import com.sky.vo.UserReportVO;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -21,6 +23,8 @@ public class ReportServiceImpl implements ReportService {
 
     @Autowired
     private OrderMapper orderMapper;
+    @Autowired
+    private UserMapper userMapper;
 
     /**
      * 营业额统计
@@ -32,19 +36,14 @@ public class ReportServiceImpl implements ReportService {
     @Override
     public TurnoverReportVO getTurnoverStatistics(LocalDate begin, LocalDate end) {
 
-        List<LocalDate> dateList = new ArrayList<>();// 存放日期
-        dateList.add(begin);
-        while (!begin.equals(end)) {
-            begin = begin.plusDays(1);
-            dateList.add(begin);
-        }
+        List<LocalDate> dateList = getDateList(begin, end);
         String dateListStr = StringUtils.join(dateList, ",");
 
         //某一天营业额指的是：订单状态为已完成且下单时间在该日0点0分之后，在23点59分之前的订单的金额数之和
         List<Double> turnoverList = new ArrayList<>();
         for (LocalDate date : dateList) {
             LocalDateTime beginTime = LocalDateTime.of(date, LocalTime.MIN);//比如查的是7月31日，此处获得的时间即为7月31日0点0分
-            LocalDateTime endTime = LocalDateTime.of(date, LocalTime.MAX);//7月31日23点59分59秒999999999分秒...
+            LocalDateTime endTime = LocalDateTime.of(date, LocalTime.MAX);//7月31日23点59分59秒999999999纳秒...
 
             Map map = new HashMap<>();// 封装参数status,beginTime,endTime
             map.put("status", Orders.COMPLETED);
@@ -58,5 +57,58 @@ public class ReportServiceImpl implements ReportService {
         String turnoverListStr = StringUtils.join(turnoverList);
 
         return new TurnoverReportVO(dateListStr, turnoverListStr);
+    }
+
+    /**
+     * 用户统计
+     *
+     * @param begin
+     * @param end
+     * @return
+     */
+    @Override
+    public UserReportVO getUserStatistics(LocalDate begin, LocalDate end) {
+        List<LocalDate> dateList = getDateList(begin, end);
+        String dateListStr = StringUtils.join(dateList, ",");
+
+        ArrayList<Integer> newUserList = new ArrayList<>();// 新增用户
+        ArrayList<Integer> totalUserList = new ArrayList<>();// 总用户
+
+        for (LocalDate date : dateList) {
+            LocalDateTime beginTime = LocalDateTime.of(date, LocalTime.MIN);//比如查的是7月31日，此处获得的时间即为7月31日0点0分
+            LocalDateTime endTime = LocalDateTime.of(date, LocalTime.MAX);//7月31日23点59分59秒999999999纳秒...
+            Map map = new HashMap();
+            // 总用户数量
+            map.put("end", endTime);
+            Integer totalUserCount = userMapper.countByMap(map);
+            totalUserList.add(totalUserCount);
+
+            // 新用户数量
+            map.put("begin", beginTime);
+            Integer newUserCount = userMapper.countByMap(map);
+            newUserList.add(newUserCount);
+        }
+
+        String totalUserListStr = StringUtils.join(totalUserList, ",");
+        String newUserListStr = StringUtils.join(newUserList, ",");
+
+        return new UserReportVO(dateListStr, totalUserListStr, newUserListStr);
+    }
+
+    /**
+     * 获取日期集合函数
+     *
+     * @param begin
+     * @param end
+     * @return
+     */
+    private List<LocalDate> getDateList(LocalDate begin, LocalDate end) {
+        List<LocalDate> dateList = new ArrayList<>();
+        dateList.add(begin);
+        while (!begin.equals(end)) {
+            begin = begin.plusDays(1);
+            dateList.add(begin);
+        }
+        return dateList;
     }
 }
